@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copilot API Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #fcfcfc;
+            --text-color: #1a1a1a;
+            --border-color: #e0e0e0;
+            --accent-gray: #666666;
+            --hover-bg: #f5f5f5;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif; /* Roman style */
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px;
+            line-height: 1.6;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h1, h2, h3 {
+            font-weight: normal;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--text-color);
+            padding-bottom: 10px;
+        }
+
+        h1 { font-size: 2rem; margin-top: 0; }
+        h2 { font-size: 1.2rem; margin-top: 3rem; color: var(--accent-gray); border-bottom: 1px solid var(--border-color); }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Usage Section */
+        .usage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            border-color: var(--accent-gray);
+        }
+
+        .label {
+            font-size: 0.85rem;
+            color: var(--accent-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 5px;
+        }
+
+        .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* Models Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            margin-top: 10px;
+        }
+
+        th {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 2px solid var(--text-color);
+            font-weight: normal;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover td {
+            background-color: var(--hover-bg);
+        }
+
+        .model-id {
+            font-family: 'Courier New', Courier, monospace; /* Monospace for code */
+            background: #f4f4f4;
+            padding: 4px 8px;
+            border-radius: 2px;
+            font-size: 0.9em;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--accent-gray);
+            cursor: pointer;
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-left: 10px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--text-color);
+            color: white;
+            border-color: var(--text-color);
+        }
+
+        .copy-btn.copied {
+            background: var(--text-color);
+            color: white;
+            border-color: var(--text-color);
+        }
+
+        #loading {
+            text-align: center;
+            color: var(--accent-gray);
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .error {
+            color: #333;
+            border: 1px solid #333;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Copilot API Dashboard</h1>
+
+    <div id="loading">Fetching data from local server...</div>
+    <div id="error-msg" class="error" style="display: none;"></div>
+
+    <div id="content" style="display: none;">
+        <!-- Usage Section -->
+        <h2>Account & Quota</h2>
+        <div class="usage-grid">
+            <div class="card">
+                <div class="label">User</div>
+                <div class="value" id="user-login">-</div>
+            </div>
+            <div class="card">
+                <div class="label">Plan</div>
+                <div class="value" id="plan-type">-</div>
+            </div>
+            <div class="card">
+                <div class="label">Chat Quota</div>
+                <div class="value" id="chat-quota">-</div>
+            </div>
+            <div class="card">
+                <div class="label">Reset Date</div>
+                <div class="value" id="reset-date">-</div>
+            </div>
+        </div>
+
+        <!-- Models Section -->
+        <h2>Available Models <span style="font-size: 0.8rem; float: right; margin-top: 5px; color: var(--accent-gray);" id="model-count"></span></h2>
+        
+        <table id="models-table">
+            <thead>
+                <tr>
+                    <th>Model Name</th>
+                    <th>ID (Click Copy)</th>
+                    <th>Provider</th>
+                </tr>
+            </thead>
+            <tbody id="models-list">
+                <!-- Rows injected here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4141';
+
+        async function fetchData() {
+            try {
+                // Fetch Usage
+                const usageRes = await fetch(`${API_BASE}/usage`);
+                if (!usageRes.ok) throw new Error('Failed to fetch usage');
+                const usageData = await usageRes.json();
+
+                // Fetch Models
+                const modelsRes = await fetch(`${API_BASE}/v1/models`);
+                if (!modelsRes.ok) throw new Error('Failed to fetch models');
+                const modelsData = await modelsRes.json();
+
+                render(usageData, modelsData);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function render(usage, models) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            // 1. Render Usage
+            document.getElementById('user-login').textContent = usage.login || 'Unknown';
+            document.getElementById('plan-type').textContent = (usage.copilot_plan || 'free').toUpperCase();
+            
+            // Check quota status
+            const chatSnapshot = usage.quota_snapshots?.chat;
+            if (chatSnapshot?.unlimited) {
+                document.getElementById('chat-quota').textContent = 'UNLIMITED';
+            } else {
+                document.getElementById('chat-quota').textContent = chatSnapshot?.remaining ?? '0';
+            }
+
+            // Date
+            const date = new Date(usage.quota_reset_date_utc || Date.now());
+            document.getElementById('reset-date').textContent = date.toLocaleDateString();
+
+            // 2. Render Models
+            const tbody = document.getElementById('models-list');
+            const modelList = models.data || [];
+            document.getElementById('model-count').textContent = `${modelList.length} MODELS FOUND`;
+
+            // Sort models alphabetically by ID
+            modelList.sort((a, b) => a.id.localeCompare(b.id));
+
+            modelList.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-style: italic;">${m.display_name || m.id}</td>
+                    <td>
+                        <span class="model-id">${m.id}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${m.id}', this)">Copy</button>
+                    </td>
+                    <td style="color: #666;">${m.owned_by || 'Unknown'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 1500);
+            });
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').style.display = 'none';
+            const errDiv = document.getElementById('error-msg');
+            errDiv.style.display = 'block';
+            errDiv.innerHTML = `
+                <strong>Connection Error</strong><br>
+                Could not connect to Copilot API at ${API_BASE}.<br><br>
+                Is the server running? Run <code>npx copilot-api start</code> in your terminal.
+            `;
+        }
+
+        // Start
+        fetchData();
+    </script>
+</body>
+</html>

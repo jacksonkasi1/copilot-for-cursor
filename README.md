@@ -88,10 +88,10 @@ Run this in a new terminal:
 ```bash
 curl http://localhost:4141/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d 
+  -d '{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Say hello"}]
-  
+  }'
 ```
 
 If you get a response, everything is working!
@@ -112,6 +112,18 @@ aider --openai-api-base http://localhost:4141/v1 --openai-api-key dummy --model 
 4. API Key: `dummy` (any value works)
 5. Model: `gpt-4o`
 
+### For **Cursor**:
+1. Go to **Settings** (Gear Icon) -> **Models**
+2. Toggle off "Copilot" (optional, to avoid conflicts)
+3. Add a new **OpenAI Compatible** model:
+   - **Base URL**: `https://<your-ngrok-url>.ngrok-free.app/v1` (e.g., `https://545b-103-181-32-182.ngrok-free.app/v1`)
+   - **API Key**: `dummy` (any value works)
+   - **Model Name**: `gpt-4o` (or any available model from your dashboard)
+4. Click **Verify**
+
+> **Note:** Since Cursor requires an HTTPS endpoint, you must use **ngrok** to forward your local port.
+> Run: `ngrok http 4141` and use the provided HTTPS URL.
+
 ---
 
 ## ⚠️ Auto-Start Setup (macOS)
@@ -124,3 +136,10 @@ If you want the service to start automatically on boot and restart on crash:
    ./setup-copilot-service.sh
    ```
 2. Check logs at `~/Library/Logs/copilot-api.log`
+
+---
+
+## 📊 Dashboard
+
+A simple HTML dashboard is included (`dashboard.html`) to check your quota and available models locally.
+Open it in your browser: `open dashboard.html`
