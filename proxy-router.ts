@@ -39,52 +39,155 @@ Bun.serve({
       if (req.method === "POST" && url.pathname.includes("/chat/completions")) {
         let json = await req.json();
         const originalModel = json.model;
+        let targetModel = json.model;
+
+        if (json.model && json.model.startsWith(PREFIX)) {
+          targetModel = json.model.slice(PREFIX.length);
+          json.model = targetModel;
+          console.log(`🔄 Rewriting model: ${originalModel} -> ${json.model}`);
+        }
+
+        const isClaude = targetModel.toLowerCase().includes('claude');
+
+        // --- HELPER: Recursively clean schema object ---
+        const cleanSchema = (schema: any) => {
+            if (!schema || typeof schema !== 'object') return schema;
+            if (schema.additionalProperties !== undefined) delete schema.additionalProperties;
+            if (schema.$schema !== undefined) delete schema.$schema;
+            if (schema.title !== undefined) delete schema.title;
+            if (schema.properties) {
+                for (const key in schema.properties) cleanSchema(schema.properties[key]);
+            }
+            if (schema.items) cleanSchema(schema.items);
+            return schema;
+        };
 
         // --- TRANSFORM TOOLS (Anthropic -> OpenAI) ---
         if (json.tools && Array.isArray(json.tools)) {
-            // console.log(`🛠️  Transforming ${json.tools.length} tools to OpenAI format.`);
-            
             json.tools = json.tools.map((tool: any) => {
-                if (tool.type === 'function' && tool.function) return tool;
-
+                let parameters = tool.input_schema || tool.parameters || {};
+                parameters = cleanSchema(parameters);
+                if (tool.type === 'function' && tool.function) {
+                    tool.function.parameters = cleanSchema(tool.function.parameters);
+                    return tool;
+                }
                 return {
                     type: "function",
                     function: {
                         name: tool.name,
                         description: tool.description,
-                        parameters: tool.input_schema || tool.parameters || {} 
+                        parameters: parameters 
                     }
                 };
             });
         }
 
         // --- FIX TOOL_CHOICE ---
-        // Cursor sends: { type: "auto" } or { type: "none" }
-        // OpenAI expects: "auto" or "none" (string)
-        
         if (json.tool_choice && typeof json.tool_choice === 'object') {
-            if (json.tool_choice.type === 'auto') {
-                console.log("🛠️  Fixing tool_choice: { type: 'auto' } -> 'auto'");
-                json.tool_choice = "auto";
-            } else if (json.tool_choice.type === 'none') {
-                console.log("🛠️  Fixing tool_choice: { type: 'none' } -> 'none'");
-                json.tool_choice = "none";
-            } else if (json.tool_choice.type === 'required') {
-                console.log("🛠️  Fixing tool_choice: { type: 'required' } -> 'required'");
-                json.tool_choice = "required";
-            }
-             // If it's a specific function call { type: "function", function: ... }, leave it alone.
+            if (json.tool_choice.type === 'auto') json.tool_choice = "auto";
+            else if (json.tool_choice.type === 'none') json.tool_choice = "none";
+            else if (json.tool_choice.type === 'required') json.tool_choice = "required";
         }
 
-        if (json.model && json.model.startsWith(PREFIX)) {
-          json.model = json.model.slice(PREFIX.length);
-          console.log(`🔄 Rewriting model: ${originalModel} -> ${json.model}`);
+        // --- PROCESS MESSAGES (Sanitize, Transform, Handle Tools) ---
+        if (json.messages && Array.isArray(json.messages)) {
+            const newMessages: any[] = [];
+            
+            for (let i = 0; i < json.messages.length; i++) {
+                const msg = json.messages[i];
+                let isToolResult = false;
+
+                // 1. Handle Anthropic "Tool Result" Block
+                if (msg.role === 'user' && Array.isArray(msg.content)) {
+                    const toolResults = msg.content.filter((c: any) => c.type === 'tool_result');
+                    if (toolResults.length > 0) {
+                        isToolResult = true;
+                        toolResults.forEach((tr: any) => {
+                            newMessages.push({
+                                role: "tool",
+                                tool_call_id: tr.tool_use_id,
+                                content: typeof tr.content === 'string' ? tr.content : JSON.stringify(tr.content)
+                            });
+                        });
+                        
+                        const otherContent = msg.content.filter((c: any) => c.type !== 'tool_result');
+                        if (otherContent.length > 0) {
+                            const mappedContent = otherContent.map((part: any) => {
+                                if (part.cache_control) delete part.cache_control;
+                                
+                                // CLAUDE: Strip Images (Quietly)
+                                if (isClaude) {
+                                    if (part.type === 'image' || (part.source && part.source.type === 'base64')) {
+                                        return { type: 'text', text: '[Image Omitted]' };
+                                    }
+                                }
+
+                                // ALL: Transform Images
+                                if (part.type === 'image' && part.source && part.source.type === 'base64') {
+                                    return {
+                                        type: 'image_url',
+                                        image_url: {
+                                            url: `data:${part.source.media_type};base64,${part.source.data}`
+                                        }
+                                    };
+                                }
+                                if (part.type === 'image') part.type = 'image_url';
+                                return part;
+                            });
+                            newMessages.push({ role: 'user', content: mappedContent });
+                        }
+                    }
+                }
+
+                if (!isToolResult) {
+                    if (Array.isArray(msg.content)) {
+                        msg.content = msg.content.map((part: any) => {
+                            if (part.cache_control) delete part.cache_control;
+                            
+                            // CLAUDE: Strip Images (Quietly)
+                            if (isClaude) {
+                                if (part.type === 'image' || (part.source && part.source.type === 'base64')) {
+                                    return { type: 'text', text: '[Image Omitted]' };
+                                }
+                            }
+
+                            // ALL: Transform Images
+                            if (part.type === 'image' && part.source && part.source.type === 'base64') {
+                                return {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: `data:${part.source.media_type};base64,${part.source.data}`
+                                    }
+                                };
+                            }
+                            
+                            if (part.type === 'image') part.type = 'image_url';
+                            return part;
+                        });
+                        
+                        if (msg.content.length === 0) msg.content = " ";
+                    }
+                    newMessages.push(msg);
+                }
+            }
+            json.messages = newMessages;
+            
+            // NOTE: Removed System Prompt Injection to avoid confusing Claude.
         }
 
         const body = JSON.stringify(json);
         const headers = new Headers(req.headers);
         headers.set("host", targetUrl.host);
         headers.set("content-length", String(new TextEncoder().encode(body).length));
+
+        // --- VISION HEADER (Only if NOT Claude) ---
+        const hasVisionContent = (messages: any[]) => messages.some(msg => 
+            Array.isArray(msg.content) && msg.content.some((p: any) => p.type === 'image_url')
+        );
+
+        if (!isClaude && hasVisionContent(json.messages)) {
+             headers.set("Copilot-Vision-Request", "true");
+        }
 
         const response = await fetch(targetUrl.toString(), {
           method: "POST",
