@@ -13,7 +13,7 @@ This project provides a local proxy server that acts as a bridge between Cursor 
 
 *   **Port 4141 (`copilot-api`):** The core service that authenticates with GitHub and provides the OpenAI-compatible API.
     *   *Powered by the open-source [copilot-api](https://github.com/ericc-ch/copilot-api) project. Our setup script automatically handles the installation and execution of this package.*
-*   **Port 4142 (`proxy-router`):** The intelligence layer (this project). It intercepts requests, transforms schemas, handles the "loophole" prefix, and serves the dashboard.
+*   **Port 4142 (`proxy-router`):** The intelligence layer. It intercepts requests, transforms schemas, handles the "loophole" prefix, and serves the dashboard.
 
 ---
 
@@ -64,6 +64,10 @@ Cursor requires an HTTPS endpoint. We use `ngrok` to expose our local proxy.
         *   **Model Name:** Use a **prefixed name** (e.g., `cus-claude-sonnet-4.5`).
 
     > **💡 Tip:** Go to the [Dashboard](http://localhost:4142) to see all available models and copy their IDs.
+
+    **Configuration Screenshot:**
+    
+    ![Cursor Settings Configuration](./cursor-settings.png)
 
 ---
 
