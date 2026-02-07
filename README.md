@@ -70,22 +70,28 @@ Cursor requires an HTTPS endpoint. We use `ngrok` to expose our local proxy.
 This proxy enables **full agentic workflows**. The following capabilities are fully supported:
 
 *   **💬 Chat & Reasoning:** Full conversation context with standard models.
-*   **📂 File System:**
-    *   `Read`: Read file contents.
-    *   `Write`: Create and overwrite files.
-    *   `StrReplace`: Intelligent find-and-replace edits.
-    *   `Delete`: Remove files.
-*   **💻 Terminal:**
-    *   `Shell`: Execute commands (`ls`, `git`, `npm`, etc.).
-*   **🔍 Search:**
-    *   `Grep` / `Glob`: Regex and file pattern search.
-    *   `SemanticSearch`: AI-powered codebase navigation.
-*   **🔌 MCP Tools (Model Context Protocol):**
-    *   Full support for external tools like **Neon** (Database), **Playwright** (Browser Automation), **Memory**, and **Docs**.
+*   **📂 File System:** `Read`, `Write`, `StrReplace`, `Delete`.
+*   **💻 Terminal:** `Shell` (Run commands).
+*   **🔍 Search:** `Grep`, `Glob`, `SemanticSearch`.
+*   **🔌 MCP Tools:** Full support for external tools like Neon, Playwright, etc.
 
 ---
 
-## 🧪 Verification
+## 🖼️ Image Support (Vision)
+
+The proxy automatically converts images pasted in Cursor into a format GitHub Copilot understands. However, support varies by model family:
+
+| Model Family | Image Support | Notes |
+| :--- | :--- | :--- |
+| **GPT-4o** | ✅ **Full** | Works perfectly with screenshots/images. |
+| **Gemini** | ✅ **Full** | `cus-gemini-3-flash-preview` handles images correctly. |
+| **Claude** | ⚠️ **Limited** | `cus-claude-sonnet-4.5` may return `400 Bad Request` with images. Use text/code only. |
+
+**Recommendation:** If you need to send a screenshot, switch to a **Gemini** or **GPT-4o** model temporarily. For heavy coding/reasoning, switch back to **Claude**.
+
+---
+
+## 🧪 Verification Prompt
 
 To confirm that Chat, File Creation, Terminal, and Reasoning are all working together, run this prompt in Cursor:
 
@@ -104,13 +110,6 @@ If the agent completes the task and shows the file content, your setup is perfec
 
 ---
 
-## ⚠️ Limitations & Notes
-
-1.  **"Append" Logic:** Sometimes the model may claim to "append" text to a file but might overwrite it instead, or fail to read the previous content first. This is a behavior of the *model*, not a failure of the proxy.
-2.  **Image Uploads:** The proxy sanitizes requests to ensure compatibility. Standard image uploads (Vision) are supported via OpenAI format (`image_url`), but some proprietary Anthropic image formats may be converted to text placeholders to prevent crashes.
-3.  **ngrok URL:** The ngrok URL changes every time you restart ngrok (unless you have a paid static domain). You will need to update the Base URL in Cursor if you restart ngrok.
-
----
 
 ### 📝 Logs
 If you encounter issues, check the logs:
