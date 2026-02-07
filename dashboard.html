@@ -154,7 +154,7 @@
 
     <h1>Copilot API Dashboard</h1>
 
-    <div id="loading">Fetching data from local server...</div>
+    <div id="loading">Fetching data from Proxy (Port 4142)...</div>
     <div id="error-msg" class="error" style="display: none;"></div>
 
     <div id="content" style="display: none;">
@@ -181,13 +181,16 @@
 
         <!-- Models Section -->
         <h2>Available Models <span style="font-size: 0.8rem; float: right; margin-top: 5px; color: var(--accent-gray);" id="model-count"></span></h2>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">
+            ℹ️ Use the <strong>Cursor Model ID</strong> when configuring Cursor to bypass internal routing.
+        </p>
         
         <table id="models-table">
             <thead>
                 <tr>
                     <th>Model Name</th>
-                    <th>ID (Click Copy)</th>
-                    <th>Provider</th>
+                    <th>Original ID</th>
+                    <th>Cursor Model ID (Use This)</th>
                 </tr>
             </thead>
             <tbody id="models-list">
@@ -197,18 +200,21 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:4141';
+        const API_PROXY = 'http://localhost:4142';
+        const API_ORIGIN = 'http://localhost:4141';
 
         async function fetchData() {
             try {
-                // Fetch Usage
-                const usageRes = await fetch(`${API_BASE}/usage`);
-                if (!usageRes.ok) throw new Error('Failed to fetch usage');
+                // Fetch Usage (Direct from 4141 as proxy handles /v1 only mostly, but let's try direct for usage to be safe)
+                // Actually, let's use the proxy for everything if possible, but usage endpoint wasn't explicitly proxied in our minimal script.
+                // Let's use origin for usage, proxy for models.
+                const usageRes = await fetch(`${API_ORIGIN}/usage`);
+                if (!usageRes.ok) throw new Error('Failed to fetch usage from Origin (4141)');
                 const usageData = await usageRes.json();
 
-                // Fetch Models
-                const modelsRes = await fetch(`${API_BASE}/v1/models`);
-                if (!modelsRes.ok) throw new Error('Failed to fetch models');
+                // Fetch Models from Proxy (4142) - This will have the prefixes!
+                const modelsRes = await fetch(`${API_PROXY}/v1/models`);
+                if (!modelsRes.ok) throw new Error('Failed to fetch models from Proxy (4142)');
                 const modelsData = await modelsRes.json();
 
                 render(usageData, modelsData);
@@ -246,14 +252,20 @@
             modelList.sort((a, b) => a.id.localeCompare(b.id));
 
             modelList.forEach(m => {
+                // The proxy already adds the prefix to 'id' and 'display_name'
+                // But we want to show the original ID too for reference.
+                // We know the prefix is 'cus-', so let's strip it for the "Original ID" column.
+                const prefix = "cus-";
+                const originalId = m.id.startsWith(prefix) ? m.id.slice(prefix.length) : m.id;
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="font-style: italic;">${m.display_name || m.id}</td>
+                    <td><span class="model-id" style="color: #888;">${originalId}</span></td>
                     <td>
-                        <span class="model-id">${m.id}</span>
+                        <span class="model-id" style="font-weight: bold;">${m.id}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${m.id}', this)">Copy</button>
                     </td>
-                    <td style="color: #666;">${m.owned_by || 'Unknown'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -277,8 +289,10 @@
             errDiv.style.display = 'block';
             errDiv.innerHTML = `
                 <strong>Connection Error</strong><br>
-                Could not connect to Copilot API at ${API_BASE}.<br><br>
-                Is the server running? Run <code>npx copilot-api start</code> in your terminal.
+                ${msg}<br><br>
+                Ensure both services are running:<br>
+                1. <code>npx copilot-api start</code> (Port 4141)<br>
+                2. <code>bun run proxy-router.ts</code> (Port 4142)
             `;
         }
 

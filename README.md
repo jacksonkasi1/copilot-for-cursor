@@ -75,71 +75,64 @@ Or visit the web dashboard: `https://ericc-ch.github.io/copilot-api?endpoint=htt
 
 ---
 
-# 🎉 You're Ready to Use!
+# 🎉 Setup for Cursor IDE (The "Loophole" Fix)
 
-The server is running and showing models, which means **authentication is already complete**. Your GitHub Copilot is connected!
+Cursor often ignores custom API URLs if the model name is standard (e.g., `gpt-4o`). To bypass this, we use a **Proxy Router** that adds a custom prefix to model names.
 
----
+## 1. Start the Services
 
-## Quick Test (Verify it works)
+You need **two** services running:
+1.  **Copilot API** (Port 4141) - The actual provider.
+2.  **Proxy Router** (Port 4142) - The "loophole" fixer.
 
-Run this in a new terminal:
+### One-Time Auto-Start Setup (macOS)
+Run these scripts to make them start automatically on boot:
 
 ```bash
-curl http://localhost:4141/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Say hello"}]
-  }'
-```
+# Setup Copilot API (4141)
+chmod +x setup-copilot-service.sh
+./setup-copilot-service.sh
 
-If you get a response, everything is working!
+# Setup Proxy Router (4142)
+chmod +x setup-proxy-service.sh
+./setup-proxy-service.sh
+```
 
 ---
 
-## Now Connect Your Coding Tool
+## 2. Configure Cursor
 
-### For **Aider**:
+1.  Open **Settings** (Gear Icon) -> **Models**.
+2.  Toggle **OFF** "Copilot" (optional, to avoid conflicts).
+3.  Add a new **OpenAI Compatible** model:
+    -   **Base URL**: `https://<your-ngrok-url>.ngrok-free.app/v1` (Forwarding to port **4142**)
+    -   **API Key**: `dummy`
+    -   **Model Name**: Use the **prefixed name** (e.g., `cus-gpt-4o`).
+
+> **How to get the prefixed name?**
+> Open `dashboard.html` in your browser. It lists all available models with their "Cursor Model ID". Just click "Copy"!
+
+---
+
+## 3. Using ngrok (Required for Cursor)
+
+Since Cursor requires HTTPS, you must expose your local proxy (Port 4142) via ngrok:
+
 ```bash
-aider --openai-api-base http://localhost:4141/v1 --openai-api-key dummy --model gpt-4o
+ngrok http 4142
 ```
 
-### For **Cline** (VS Code Extension):
-1. Open Cline settings
-2. Set API Provider → OpenAI Compatible
-3. Base URL: `http://localhost:4141/v1`
-4. API Key: `dummy` (any value works)
-5. Model: `gpt-4o`
-
-### For **Cursor**:
-1. Go to **Settings** (Gear Icon) -> **Models**
-2. Toggle off "Copilot" (optional, to avoid conflicts)
-3. Add a new **OpenAI Compatible** model:
-   - **Base URL**: `https://<your-ngrok-url>.ngrok-free.app/v1` (e.g., `https://545b-103-181-32-182.ngrok-free.app/v1`)
-   - **API Key**: `dummy` (any value works)
-   - **Model Name**: `gpt-4o` (or any available model from your dashboard)
-4. Click **Verify**
-
-> **Note:** Since Cursor requires an HTTPS endpoint, you must use **ngrok** to forward your local port.
-> Run: `ngrok http 4141` and use the provided HTTPS URL.
-
----
-
-## ⚠️ Auto-Start Setup (macOS)
-
-If you want the service to start automatically on boot and restart on crash:
-
-1. Run the setup script included in this repo:
-   ```bash
-   chmod +x setup-copilot-service.sh
-   ./setup-copilot-service.sh
-   ```
-2. Check logs at `~/Library/Logs/copilot-api.log`
+Use the HTTPS URL provided by ngrok as your Base URL in Cursor.
 
 ---
 
 ## 📊 Dashboard
 
-A simple HTML dashboard is included (`dashboard.html`) to check your quota and available models locally.
-Open it in your browser: `open dashboard.html`
+Open `dashboard.html` to:
+- Check your usage/quota.
+- See the list of available models.
+- **Copy the "Cursor Model ID"** (prefixed) for configuration.
+
+```bash
+open dashboard.html
+```
