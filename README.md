@@ -43,6 +43,10 @@ chmod +x setup-proxy-service.sh
 Check if the dashboard is running:
 👉 **[http://localhost:4142](http://localhost:4142)**
 
+**Dashboard Preview:**
+
+![Dashboard Preview](./dashboard-preview.png)
+
 ---
 
 ## ⚙️ Cursor Configuration
