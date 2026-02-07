@@ -1,133 +1,118 @@
-# Switching GitHub Accounts in copilot-api
+# 🚀 Copilot Proxy for Cursor
 
-## How the Token Works
+**Unlock the full power of GitHub Copilot in Cursor IDE.**
 
-The GitHub token is saved to `~/.local/share/copilot-api/github_token` with 0o600 permissions. The GitHub token persists across restarts. The Copilot token is ephemeral and refreshed automatically.
-
----
-
-## To Switch Accounts (When Credits Run Out):
-
-### Step 1: Delete the stored token
-```bash
-rm ~/.local/share/copilot-api/github_token
-```
-
-### Step 2: Restart copilot-api
-```bash
-# Stop the running server (Ctrl+C) then:
-npx copilot-api start
-```
-
-This will trigger the OAuth device code flow again, and you can authenticate with your **second GitHub account**.
+This project provides a local proxy server that acts as a bridge between Cursor and GitHub Copilot. It solves key limitations by:
+1.  **Bypassing Cursor's Model Routing:** Using a custom prefix (`cus-`) to force Cursor to use your own API endpoint instead of its internal backend.
+2.  **Enabling Agentic Capabilities:** Transforming Cursor's Anthropic-style tool calls into OpenAI-compatible formats that Copilot understands. This enables **File Editing, Terminal Execution, Codebase Search, and MCP Tools**.
+3.  **Fixing Schema Errors:** Automatically sanitizing requests to prevent `400 Bad Request` errors caused by format mismatches (e.g., `tool_choice`, `cache_control`).
 
 ---
 
-## Alternative: Provide Token Directly
+## 🏗 Architecture
 
-You can also provide a GitHub token directly: `npx copilot-api@latest start --github-token ghp_YOUR_TOKEN_HERE`
-
-So you could create multiple tokens for each account and switch by using different tokens.
+*   **Port 4141 (`copilot-api`):** The core service that authenticates with GitHub and provides the OpenAI-compatible API.
+*   **Port 4142 (`proxy-router`):** The intelligence layer. It intercepts requests, transforms schemas, handles the "loophole" prefix, and serves the dashboard.
 
 ---
 
-## Quick Script to Switch Accounts
+## 🛠 Setup Guide
 
-Create a helper script `switch-copilot-account.sh`:
+### 1. Prerequisites
+*   Node.js & npm
+*   Bun (`curl -fsSL https://bun.sh/install | bash`)
+*   ngrok (for HTTPS tunneling required by Cursor)
+
+### 2. Installation & Auto-Start (macOS)
+Run these scripts once to set up persistent background services. They will start automatically on boot and restart if they crash.
 
 ```bash
-#!/bin/bash
-echo "🔄 Switching Copilot account..."
-rm -f ~/.local/share/copilot-api/github_token
-echo "✅ Token removed. Starting fresh authentication..."
-npx copilot-api start
-```
 
-Make it executable:
-```bash
-chmod +x switch-copilot-account.sh
-```
-
-Run it when you want to switch:
-```bash
-./switch-copilot-account.sh
-```
-
----
-
-## Check Your Usage Before Switching
-
-You can show your Copilot usage/quota in the terminal (no server needed) with: `npx copilot-api@latest check-usage`
-
-Or visit the web dashboard: `http://localhost:4142` (served by our proxy)
-
----
-
-## ⚠️ Important Notes
-
-1. GitHub Security Notice: Excessive automated or scripted use of Copilot may trigger GitHub's abuse-detection systems. You may receive a warning from GitHub Security, and further anomalous activity could result in temporary suspension of your Copilot access.
-
-2. Use this proxy responsibly to avoid account restrictions.
-
----
-
-**Summary:** Just delete the token file at `~/.local/share/copilot-api/github_token` and restart — you'll be prompted to login with a different account! 🔄
-
----
-
-# 🎉 Setup for Cursor IDE (The "Loophole" Fix)
-
-Cursor often ignores custom API URLs if the model name is standard (e.g., `gpt-4o`). To bypass this, we use a **Proxy Router** that adds a custom prefix to model names.
-
-## 1. Start the Services
-
-You need **two** services running:
-1.  **Copilot API** (Port 4141) - The actual provider.
-2.  **Proxy Router** (Port 4142) - The "loophole" fixer + Dashboard server.
-
-### One-Time Auto-Start Setup (macOS)
-Run these scripts to make them start automatically on boot:
-
-```bash
-# Setup Copilot API (4141)
+# 1. Setup Core API (Port 4141)
 chmod +x setup-copilot-service.sh
 ./setup-copilot-service.sh
 
-# Setup Proxy Router (4142)
+# 2. Setup Proxy Router (Port 4142)
 chmod +x setup-proxy-service.sh
 ./setup-proxy-service.sh
 ```
 
----
-
-## 2. Configure Cursor
-
-1.  Open **Settings** (Gear Icon) -> **Models**.
-2.  Toggle **OFF** "Copilot" (optional, to avoid conflicts).
-3.  Add a new **OpenAI Compatible** model:
-    -   **Base URL**: `https://<your-ngrok-url>.ngrok-free.app/v1` (Forwarding to port **4142**)
-    -   **API Key**: `dummy`
-    -   **Model Name**: Use the **prefixed name** (e.g., `cus-gpt-4o`).
-
-> **How to get the prefixed name?**
-> Open the dashboard at `http://localhost:4142`. It lists all available models with their "Cursor Model ID". Just click "Copy"!
+### 3. Verify Services
+Check if the dashboard is running:
+👉 **[http://localhost:4142](http://localhost:4142)**
 
 ---
 
-## 3. Using ngrok (Required for Cursor)
+## ⚙️ Cursor Configuration
 
-Since Cursor requires HTTPS, you must expose your local proxy (Port 4142) via ngrok:
+Cursor requires an HTTPS endpoint. We use `ngrok` to expose our local proxy.
 
-```bash
-ngrok http 4142
+1.  **Start ngrok:**
+    ```bash
+    ngrok http 4142
+    ```
+    *Copy the HTTPS URL provided by ngrok (e.g., `https://your-url.ngrok-free.app`).*
+
+2.  **Configure Cursor:**
+    *   Go to **Settings** (Gear Icon) -> **Models**.
+    *   Toggle **OFF** "Copilot" (optional, to avoid conflicts).
+    *   Add a new **OpenAI Compatible** model:
+        *   **Base URL:** `https://your-ngrok-url.ngrok-free.app/v1`
+        *   **API Key:** `dummy` (any value works)
+        *   **Model Name:** Use a **prefixed name** (e.g., `cus-claude-sonnet-4.5`).
+
+    > **💡 Tip:** Go to the [Dashboard](http://localhost:4142) to see all available models and copy their IDs.
+
+---
+
+## ✨ Features & Supported Tools
+
+This proxy enables **full agentic workflows**. The following capabilities are fully supported:
+
+*   **💬 Chat & Reasoning:** Full conversation context with standard models.
+*   **📂 File System:**
+    *   `Read`: Read file contents.
+    *   `Write`: Create and overwrite files.
+    *   `StrReplace`: Intelligent find-and-replace edits.
+    *   `Delete`: Remove files.
+*   **💻 Terminal:**
+    *   `Shell`: Execute commands (`ls`, `git`, `npm`, etc.).
+*   **🔍 Search:**
+    *   `Grep` / `Glob`: Regex and file pattern search.
+    *   `SemanticSearch`: AI-powered codebase navigation.
+*   **🔌 MCP Tools (Model Context Protocol):**
+    *   Full support for external tools like **Neon** (Database), **Playwright** (Browser Automation), **Memory**, and **Docs**.
+
+---
+
+## 🧪 Verification
+
+To confirm that Chat, File Creation, Terminal, and Reasoning are all working together, run this prompt in Cursor:
+
+```text
+Please perform this multi-step test to verify your tool capabilities:
+
+1. Create a new directory named "test_agent_capabilities".
+2. Inside it, create a file "status_report.md" with the content: "# Agent Capabilities Test\nStarted verification..."
+3. Run the terminal command `ls -F` in that directory and append the output to "status_report.md".
+4. Search the current codebase for the string "proxy-router" using grep/search and summarize what you find in a new section in "status_report.md".
+5. Use your memory tool (if available) to save this fact: "The verification test was run successfully."
+6. Finally, read the "status_report.md" file and show me the final content.
 ```
 
-Use the HTTPS URL provided by ngrok as your Base URL in Cursor.
+If the agent completes the task and shows the file content, your setup is perfect! ✅
 
 ---
 
-## 📊 Dashboard
+## ⚠️ Limitations & Notes
 
-The proxy server (Port 4142) now serves the dashboard directly to avoid CORS issues.
+1.  **"Append" Logic:** Sometimes the model may claim to "append" text to a file but might overwrite it instead, or fail to read the previous content first. This is a behavior of the *model*, not a failure of the proxy.
+2.  **Image Uploads:** The proxy sanitizes requests to ensure compatibility. Standard image uploads (Vision) are supported via OpenAI format (`image_url`), but some proprietary Anthropic image formats may be converted to text placeholders to prevent crashes.
+3.  **ngrok URL:** The ngrok URL changes every time you restart ngrok (unless you have a paid static domain). You will need to update the Base URL in Cursor if you restart ngrok.
 
-👉 **Open in Browser:** [http://localhost:4142](http://localhost:4142)
+---
+
+### 📝 Logs
+If you encounter issues, check the logs:
+*   Proxy: `tail -f ~/Library/Logs/copilot-proxy.log`
+*   API: `tail -f ~/Library/Logs/copilot-api.log`
