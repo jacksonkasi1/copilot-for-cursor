@@ -12,7 +12,8 @@ This project provides a local proxy server that acts as a bridge between Cursor 
 ## 🏗 Architecture
 
 *   **Port 4141 (`copilot-api`):** The core service that authenticates with GitHub and provides the OpenAI-compatible API.
-*   **Port 4142 (`proxy-router`):** The intelligence layer. It intercepts requests, transforms schemas, handles the "loophole" prefix, and serves the dashboard.
+    *   *Powered by the open-source [copilot-api](https://github.com/ericc-ch/copilot-api) project. Our setup script automatically handles the installation and execution of this package.*
+*   **Port 4142 (`proxy-router`):** The intelligence layer (this project). It intercepts requests, transforms schemas, handles the "loophole" prefix, and serves the dashboard.
 
 ---
 
@@ -25,6 +26,8 @@ This project provides a local proxy server that acts as a bridge between Cursor 
 
 ### 2. Installation & Auto-Start (macOS)
 Run these scripts once to set up persistent background services. They will start automatically on boot and restart if they crash.
+
+**Note:** The `setup-copilot-service.sh` script will automatically install and run the upstream `copilot-api` via `npx`, so you don't need to clone that repository manually.
 
 ```bash
 # 1. Setup Core API (Port 4141)
