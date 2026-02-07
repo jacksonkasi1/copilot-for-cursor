@@ -72,3 +72,55 @@ Or visit the web dashboard: `https://ericc-ch.github.io/copilot-api?endpoint=htt
 ---
 
 **Summary:** Just delete the token file at `~/.local/share/copilot-api/github_token` and restart — you'll be prompted to login with a different account! 🔄
+
+---
+
+# 🎉 You're Ready to Use!
+
+The server is running and showing models, which means **authentication is already complete**. Your GitHub Copilot is connected!
+
+---
+
+## Quick Test (Verify it works)
+
+Run this in a new terminal:
+
+```bash
+curl http://localhost:4141/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d 
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Say hello"}]
+  
+```
+
+If you get a response, everything is working!
+
+---
+
+## Now Connect Your Coding Tool
+
+### For **Aider**:
+```bash
+aider --openai-api-base http://localhost:4141/v1 --openai-api-key dummy --model gpt-4o
+```
+
+### For **Cline** (VS Code Extension):
+1. Open Cline settings
+2. Set API Provider → OpenAI Compatible
+3. Base URL: `http://localhost:4141/v1`
+4. API Key: `dummy` (any value works)
+5. Model: `gpt-4o`
+
+---
+
+## ⚠️ Auto-Start Setup (macOS)
+
+If you want the service to start automatically on boot and restart on crash:
+
+1. Run the setup script included in this repo:
+   ```bash
+   chmod +x setup-copilot-service.sh
+   ./setup-copilot-service.sh
+   ```
+2. Check logs at `~/Library/Logs/copilot-api.log`
