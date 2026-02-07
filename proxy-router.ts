@@ -10,6 +10,19 @@ Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
+
+    // 0. Serve Dashboard (Fixes CORS issues)
+    if (url.pathname === "/" || url.pathname === "/dashboard.html") {
+      try {
+        const dashboardContent = await Bun.file("dashboard.html").text();
+        return new Response(dashboardContent, {
+          headers: { "Content-Type": "text/html" },
+        });
+      } catch (e) {
+        return new Response("Dashboard not found. Ensure dashboard.html is in the same directory.", { status: 404 });
+      }
+    }
+
     const targetUrl = new URL(url.pathname + url.search, TARGET_URL);
 
     // Handle CORS preflight

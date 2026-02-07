@@ -59,7 +59,7 @@ Run it when you want to switch:
 
 You can show your Copilot usage/quota in the terminal (no server needed) with: `npx copilot-api@latest check-usage`
 
-Or visit the web dashboard: `https://ericc-ch.github.io/copilot-api?endpoint=http://localhost:4141/usage`
+Or visit the web dashboard: `http://localhost:4142` (served by our proxy)
 
 ---
 
@@ -83,7 +83,7 @@ Cursor often ignores custom API URLs if the model name is standard (e.g., `gpt-4
 
 You need **two** services running:
 1.  **Copilot API** (Port 4141) - The actual provider.
-2.  **Proxy Router** (Port 4142) - The "loophole" fixer.
+2.  **Proxy Router** (Port 4142) - The "loophole" fixer + Dashboard server.
 
 ### One-Time Auto-Start Setup (macOS)
 Run these scripts to make them start automatically on boot:
@@ -110,7 +110,7 @@ chmod +x setup-proxy-service.sh
     -   **Model Name**: Use the **prefixed name** (e.g., `cus-gpt-4o`).
 
 > **How to get the prefixed name?**
-> Open `dashboard.html` in your browser. It lists all available models with their "Cursor Model ID". Just click "Copy"!
+> Open the dashboard at `http://localhost:4142`. It lists all available models with their "Cursor Model ID". Just click "Copy"!
 
 ---
 
@@ -128,11 +128,6 @@ Use the HTTPS URL provided by ngrok as your Base URL in Cursor.
 
 ## 📊 Dashboard
 
-Open `dashboard.html` to:
-- Check your usage/quota.
-- See the list of available models.
-- **Copy the "Cursor Model ID"** (prefixed) for configuration.
+The proxy server (Port 4142) now serves the dashboard directly to avoid CORS issues.
 
-```bash
-open dashboard.html
-```
+👉 **Open in Browser:** [http://localhost:4142](http://localhost:4142)

@@ -154,7 +154,7 @@
 
     <h1>Copilot API Dashboard</h1>
 
-    <div id="loading">Fetching data from Proxy (Port 4142)...</div>
+    <div id="loading">Fetching data from Proxy...</div>
     <div id="error-msg" class="error" style="display: none;"></div>
 
     <div id="content" style="display: none;">
@@ -200,21 +200,19 @@
     </div>
 
     <script>
-        const API_PROXY = 'http://localhost:4142';
-        const API_ORIGIN = 'http://localhost:4141';
+        // Since dashboard is served by the proxy server itself, use relative paths!
+        const API_BASE = ''; 
 
         async function fetchData() {
             try {
-                // Fetch Usage (Direct from 4141 as proxy handles /v1 only mostly, but let's try direct for usage to be safe)
-                // Actually, let's use the proxy for everything if possible, but usage endpoint wasn't explicitly proxied in our minimal script.
-                // Let's use origin for usage, proxy for models.
-                const usageRes = await fetch(`${API_ORIGIN}/usage`);
-                if (!usageRes.ok) throw new Error('Failed to fetch usage from Origin (4141)');
+                // Fetch Usage (Proxy handles forwarding)
+                const usageRes = await fetch(`${API_BASE}/usage`);
+                if (!usageRes.ok) throw new Error('Failed to fetch usage');
                 const usageData = await usageRes.json();
 
-                // Fetch Models from Proxy (4142) - This will have the prefixes!
-                const modelsRes = await fetch(`${API_PROXY}/v1/models`);
-                if (!modelsRes.ok) throw new Error('Failed to fetch models from Proxy (4142)');
+                // Fetch Models (Proxy handles modification)
+                const modelsRes = await fetch(`${API_BASE}/v1/models`);
+                if (!modelsRes.ok) throw new Error('Failed to fetch models');
                 const modelsData = await modelsRes.json();
 
                 render(usageData, modelsData);
@@ -253,8 +251,6 @@
 
             modelList.forEach(m => {
                 // The proxy already adds the prefix to 'id' and 'display_name'
-                // But we want to show the original ID too for reference.
-                // We know the prefix is 'cus-', so let's strip it for the "Original ID" column.
                 const prefix = "cus-";
                 const originalId = m.id.startsWith(prefix) ? m.id.slice(prefix.length) : m.id;
 
