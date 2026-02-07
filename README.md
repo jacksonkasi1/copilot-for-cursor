@@ -99,3 +99,7 @@ To prevent crashes, the proxy automatically **strips images** from requests sent
 If you encounter issues, check the logs:
 *   Proxy: `tail -f ~/Library/Logs/copilot-proxy.log`
 *   API: `tail -f ~/Library/Logs/copilot-api.log`
+
+---
+
+> ⚠️ **DISCLAIMER:** This project is **unofficial** and created for **educational purposes only**. It interacts with undocumented internal APIs of GitHub Copilot and Cursor. Use at your own risk. The authors are not affiliated with GitHub, Microsoft, or Anysphere (Cursor). Please use your API credits responsibly and in accordance with the provider's Terms of Service.
