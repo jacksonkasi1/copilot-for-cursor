@@ -27,7 +27,6 @@ This project provides a local proxy server that acts as a bridge between Cursor 
 Run these scripts once to set up persistent background services. They will start automatically on boot and restart if they crash.
 
 ```bash
-
 # 1. Setup Core API (Port 4141)
 chmod +x setup-copilot-service.sh
 ./setup-copilot-service.sh
@@ -77,39 +76,24 @@ This proxy enables **full agentic workflows**. The following capabilities are fu
 
 ---
 
-## 🖼️ Image Support (Vision)
+## ⚠️ Known Limitations: Claude Vision Support
 
-The proxy automatically converts images pasted in Cursor into a format GitHub Copilot understands. However, support varies by model family:
+There is a known server-side limitation with **Claude models** via the GitHub Copilot API.
 
-| Model Family | Image Support | Notes |
-| :--- | :--- | :--- |
-| **GPT-4o** | ✅ **Full** | Works perfectly with screenshots/images. |
-| **Gemini** | ✅ **Full** | `cus-gemini-3-flash-preview` handles images correctly. |
-| **Claude** | ⚠️ **Limited** | `cus-claude-sonnet-4.5` may return `400 Bad Request` with images. Use text/code only. |
+*   **Gemini / GPT-4o:** Full Vision Support (Images work perfectly).
+*   **Claude (via Copilot):** Does **NOT** support images via the API proxy. Requests containing images will be rejected by GitHub with `400 Bad Request`.
 
-**Recommendation:** If you need to send a screenshot, switch to a **Gemini** or **GPT-4o** model temporarily. For heavy coding/reasoning, switch back to **Claude**.
+**The Workaround (Implemented in Proxy):**
+To prevent crashes, the proxy automatically **strips images** from requests sent to Claude models. Claude will see a placeholder `[Image Omitted]` instead.
 
----
+**Suggested Workflow:**
+1.  **Need Vision?** Use `cus-gemini-3-flash-preview` or `cus-gpt-4o`.
+2.  **Need Coding Smarts?** Use `cus-claude-sonnet-4.5`.
+3.  **Switching Context:** If you start with Gemini (image) and want to switch to Claude, consider **duplicating the chat** (Cursor feature) or starting a fresh chat to ensure a clean context without image dependencies.
 
-## 🧪 Verification Prompt
-
-To confirm that Chat, File Creation, Terminal, and Reasoning are all working together, run this prompt in Cursor:
-
-```text
-Please perform this multi-step test to verify your tool capabilities:
-
-1. Create a new directory named "test_agent_capabilities".
-2. Inside it, create a file "status_report.md" with the content: "# Agent Capabilities Test\nStarted verification..."
-3. Run the terminal command `ls -F` in that directory and append the output to "status_report.md".
-4. Search the current codebase for the string "proxy-router" using grep/search and summarize what you find in a new section in "status_report.md".
-5. Use your memory tool (if available) to save this fact: "The verification test was run successfully."
-6. Finally, read the "status_report.md" file and show me the final content.
-```
-
-If the agent completes the task and shows the file content, your setup is perfect! ✅
+> **💡 Help Wanted:** If you know how to get Claude Vision working via the unofficial Copilot API, please open an Issue or PR!
 
 ---
-
 
 ### 📝 Logs
 If you encounter issues, check the logs:
